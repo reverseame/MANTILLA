@@ -22,7 +22,7 @@ Create and activate your virtual environment:
 
 ```Shell
 $ python3 -m venv .
-$ source bin/activate
+$ source venv/bin/activate
 (venv) $ git clone https://github.com/reverseame/MANTILLA.git
 ```
 
@@ -35,16 +35,43 @@ Now, you can install dependencies in [requirements.txt](requirements.txt):
 ## Usage
 
 ```
-usage: MANTILLA.py [-h] [-b] [-d] [-k]
+usage: MANTILLA.py [-h] [-b BINARY] [-j JSON] [-m METRIC] [-t THRESHOLD]
+                   [-k NEIGHBORS] [-f FILE_MODEL] [-d DIRECTORY]
 
-This tool allows you to identify the runtime library on statically linked Linux Binaries
+This tool identifies the runtime library in statically linked Linux binaries.
 
 optional arguments:
   -h, --help            show this help message and exit
-  -b, --binary          specify the binary to analyze
-  -d <distance>         specify the distance metric
-  -t <threshold>        specify the distance threshold
-  -k <neighbors>        specify the number of k-neighbors
+  -b BINARY, --binary BINARY
+                        Specify the binary to analyze
+  -j JSON, --json JSON  Specify the features of a binary in JSON format
+  -m METRIC, --metric METRIC
+                        Specify the distance metric
+  -t THRESHOLD, --threshold THRESHOLD
+                        Specify the distance threshold
+  -k NEIGHBORS, --neighbors NEIGHBORS
+                        Specify the number of k-neighbors
+  -f FILE_MODEL, --file_model FILE_MODEL
+                        Specify the features model CSV file
+  -d DIRECTORY, --directory DIRECTORY
+                        Specify a directory with test files
 ```
+
+To extract features from a binary:
+
+```
+Usage: python3 feature_extraction.py -s <source_code_path> -b <binary_file>
+
+Options:
+  -h, --help            show this help message and exit
+  -s SOURCE_CODE_PATH, --source=SOURCE_CODE_PATH
+                        Source code directory
+  -b BINARY_FILE_PATH, --binary=BINARY_FILE_PATH
+                        Binary file path
+  -p PDB, --pdb=PDB     PDB file path
+
+```
+
+The datasets used to train and test the model are available at [zenodo](https://zenodo.org/records/7991325)
 ## License
 Licensed under the [GNU GPLv3](LICENSE) license.
