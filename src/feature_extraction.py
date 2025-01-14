@@ -192,7 +192,6 @@ class FunctionFilter:
 
 
     @staticmethod
-
     def remove_glibc(clean_names):
         # Define the glibc files to check
         glibc_files = ["glibc_32.txt", "glibc_functions.txt", "uclibc_functions.txt", "musl_functions.txt"]
