@@ -75,3 +75,11 @@ Options:
 The datasets used to train and test the model are available at [zenodo](https://zenodo.org/records/7991325)
 ## License
 Licensed under the [GNU GPLv3](LICENSE) license.
+
+---
+
+## Funding support
+
+Part of this research was supported by the Spanish National Cybersecurity Institute (INCIBE) under *Proyecto Estratégico de Ciberseguridad -- CIBERSEGURIDAD EINA UNIZAR* and by the Recovery, Transformation and Resilience Plan funds, financed by the European Union (Next Generation).
+
+![INCIBE_logos](assets/INCIBE_logos.jpg)
