@@ -67,11 +67,11 @@ class BinaryAnalyzer:
 
     def get_functions(self):
         func_list = json.loads(self.r2_handler.cmd('aflj'))
-        imports = self.get_imports()
+        imports = set(self.get_imports())
         return [
             {'name': func['name'], 'offset': func['offset']}
             for func in func_list
-            if 'sym.imp.' not in func['name'] and not any(func['name'] in imported_func for imported_func in imports)
+            if 'sym.imp.' not in func['name'] and func['name'] not in imports
         ]
 
     def get_imports(self):
@@ -185,10 +185,11 @@ class FunctionFilter:
 
     @staticmethod
     def remove_fnc_c_plus(clean_names, code_functions):
-        return [
-            item for item in clean_names
-            if not any(code in item['name'] for code in code_functions if code != 'main')
-        ]
+        # Drop functions whose name matches a source-code function exactly,
+        # keeping 'main'. Matching by substring (the previous behavior) wrongly
+        # removed unrelated functions, e.g. 'address_of' for a source 'add'.
+        code_functions = set(code_functions) - {'main'}
+        return [item for item in clean_names if item['name'] not in code_functions]
 
 
     @staticmethod
