@@ -5,7 +5,6 @@ from collections import Counter
 import os
 import json
 import sys
-from feature_extraction import analyze_binary
 
 def get_feature_dict(func):
     """Extract feature dictionary from a function's data."""
@@ -68,6 +67,11 @@ def prepare_test_files(args):
     if args.json:
         return [args.json]
     if args.binary:
+        # Imported lazily: feature extraction pulls in heavy native
+        # dependencies (r2pipe, tlsh, ssdeep, magic) that are only needed to
+        # analyze a raw binary. The -j/-d paths classify pre-extracted features
+        # and must work without them installed.
+        from feature_extraction import analyze_binary
         output_file = analyze_binary(args.binary, [], [])
 
         return [output_file]
