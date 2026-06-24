@@ -1,5 +1,6 @@
 import os
 import re
+import bisect
 import json
 import magic
 import subprocess
@@ -167,13 +168,39 @@ class BinaryAnalyzer:
             return []
 
     def _extract_string_references(self):
-        str_list = json.loads(self.r2_handler.cmd("izj"))
+        """Map each function name to the strings it references.
+
+        Instead of issuing one ``axt`` per string (O(number of strings) r2
+        commands), this fetches the string list, the function list and the
+        whole cross-reference list once each, and resolves the owning function
+        of every string reference locally via binary search over the function
+        ranges.
+        """
+        strings = {s['vaddr']: s['string'] for s in json.loads(self.r2_handler.cmd("izj"))}
+        if not strings:
+            return {}
+
+        functions = json.loads(self.r2_handler.cmd("aflj"))
+        functions.sort(key=lambda f: f['offset'])
+        starts = [f['offset'] for f in functions]
+
+        def function_at(address):
+            idx = bisect.bisect_right(starts, address) - 1
+            if idx < 0:
+                return None
+            func = functions[idx]
+            if address < func['offset'] + func.get('size', 0):
+                return func['name']
+            return None
+
         references = {}
-        for string in str_list:
-            refs = json.loads(self.r2_handler.cmd(f"axtj @{string['vaddr']}"))
-            for ref in refs:
-                if 'fcn_name' in ref:
-                    references.setdefault(ref['fcn_name'], []).append(string['string'])
+        for xref in json.loads(self.r2_handler.cmd("axlj")):
+            target, source = xref.get('addr'), xref.get('from')
+            if source is None or target not in strings:
+                continue
+            name = function_at(source)
+            if name:
+                references.setdefault(name, []).append(strings[target])
         return references
 
 
