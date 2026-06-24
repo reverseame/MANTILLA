@@ -159,6 +159,17 @@ class BinaryAnalyzer:
             return None
 
     def _entropy_from_bytes(self, fnc_bytes):
+        # -1 is a sentinel for "bytes unavailable", not a real entropy value.
+        # In practice this only happens on ARM binaries: radare2's zaf fails to
+        # recover the bytes for a fraction of ARM/Thumb functions (~10-20% of
+        # ARM functions in the training corpus, 0% on x86/x86-64/mips), so the
+        # sentinel weakly correlates with the ARM architecture. It is an
+        # extraction artifact, not signal. Measured to be harmless: those rows
+        # collapse to ~15 unique vectors under drop_duplicates() at training
+        # time, and 5-fold CV accuracy is identical whether -1 is kept or
+        # imputed to the median. Kept as -1 for compatibility with the existing
+        # features_model.csv. Beware before standardizing features: that would
+        # give this artifact real weight.
         if not fnc_bytes:
             return -1
         try:
