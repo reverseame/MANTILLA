@@ -51,7 +51,7 @@ def parse_arguments():
     parser.add_argument("-m", "--metric", type=str, default="euclidean", help="Specify the distance metric")
     parser.add_argument("-t", "--threshold", type=float, default=1.0, help="Specify the distance threshold")
     parser.add_argument("-k", "--neighbors", type=int, default=5, help="Specify the number of k-neighbors")
-    parser.add_argument("-f", "--file_model", type=str, default="features_model.csv", help="Specify the features model CSV file")
+    parser.add_argument("-f", "--file_model", type=str, default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "features_model.csv"), help="Specify the features model CSV file")
     parser.add_argument("-d", "--directory", type=str, help="Specify a directory with test files")
 
     args = parser.parse_args()
