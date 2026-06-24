@@ -47,7 +47,12 @@ def parse_arguments():
     parser.add_argument("-b", "--binary", type=str, help="Specify the binary to analyze")
     parser.add_argument("-j", "--json", type=str, help="Specify the features of a binary in JSON format")
     parser.add_argument("-m", "--metric", type=str, default="euclidean", help="Specify the distance metric")
-    parser.add_argument("-t", "--threshold", type=float, default=1.0, help="Specify the distance threshold")
+    parser.add_argument("-t", "--threshold", type=float, default=1.0,
+                        help="Maximum neighbor distance for a vote. This is an ABSOLUTE distance "
+                             "in the chosen metric (euclidean by default) computed over UNNORMALIZED "
+                             "features, so its scale depends on the feature magnitudes. A neighbor "
+                             "only votes if its distance is <= THRESHOLD. Pass a negative value to "
+                             "disable filtering and let every k-neighbor vote (default: 1.0)")
     parser.add_argument("-k", "--neighbors", type=int, default=5, help="Specify the number of k-neighbors")
     parser.add_argument("-f", "--file_model", type=str, default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "features_model.csv"), help="Specify the features model CSV file")
     parser.add_argument("-d", "--directory", type=str, help="Specify a directory with test files")
@@ -87,8 +92,14 @@ def train_knn_model(features_file, n_neighbors, metric):
     return model, X, y
 
 
-def classify_file(model, test_features, X, y, threshold=1):
+def classify_file(model, test_features, X, y, threshold=None):
+    """Collect the labels of each test function's k nearest neighbors.
 
+    ``threshold`` is an ABSOLUTE distance in the model's metric (euclidean by
+    default) computed over UNNORMALIZED features: a neighbor only contributes
+    its label if its distance is <= ``threshold``. Pass ``None`` (or a negative
+    value) to disable filtering and let every one of the k neighbors vote.
+    """
     results = {"predictions": []}
     df_test = pd.DataFrame(test_features)
     X_test = df_test.values
@@ -96,13 +107,17 @@ def classify_file(model, test_features, X, y, threshold=1):
     if X_test.size == 0:
         return results
 
+    # A negative CLI threshold means "no filtering"; normalize it to None here.
+    if threshold is not None and threshold < 0:
+        threshold = None
+
     kneighbors_distance, kneighbors_index_labels = model.kneighbors(X_test)
 
     predicted_labels = [
         y[kneighbors_index_labels[d][index]]
         for d in range(len(kneighbors_distance))
         for index in range(len(kneighbors_distance[d]))
-        if kneighbors_distance[d][index] <= threshold
+        if threshold is None or kneighbors_distance[d][index] <= threshold
     ]
 
     results["predictions"] = predicted_labels
