@@ -101,22 +101,25 @@ class BinaryAnalyzer:
         # them, instead of running "zaf @offset; zj" four separate times.
         fnc_bytes = self._get_fnc_bytes(offset)
 
+        # Read afij fields defensively: their names vary across radare2
+        # versions (e.g. older releases lack 'ninstrs'), and a missing key
+        # should degrade gracefully rather than abort extraction.
         features = {
             'name': function_name,
             'offset': self._func_offset(func_data),
-            'cc': func_data['cc'],
-            'cost': func_data['cost'],
-            'size': func_data['size'],
-            'stackframe': func_data['stackframe'],
-            'nbbs': func_data['nbbs'],
-            'ninst': func_data['ninstrs'],
-            'edges': func_data['edges'],
-            'ebbs': func_data['ebbs'],
-            'noreturn': func_data['noreturn'],
-            'indegree': func_data['indegree'],
-            'outdegree': func_data['outdegree'],
-            'nlocals': func_data['nlocals'] if 'nlocals' in func_data else 0,
-            'nargs': func_data['nargs'] if 'nargs' in func_data else 0,
+            'cc': func_data.get('cc', 0),
+            'cost': func_data.get('cost', 0),
+            'size': func_data.get('size', 0),
+            'stackframe': func_data.get('stackframe', 0),
+            'nbbs': func_data.get('nbbs', 0),
+            'ninst': func_data.get('ninstrs', func_data.get('ninstr', 0)),
+            'edges': func_data.get('edges', 0),
+            'ebbs': func_data.get('ebbs', 0),
+            'noreturn': func_data.get('noreturn', False),
+            'indegree': func_data.get('indegree', 0),
+            'outdegree': func_data.get('outdegree', 0),
+            'nlocals': func_data.get('nlocals', 0),
+            'nargs': func_data.get('nargs', 0),
             'opcodes': self._extract_opcodes(offset),
             'bytes': fnc_bytes,
             'tlsh_hash_bytes': self._tlsh_from_bytes(fnc_bytes),
@@ -195,6 +198,15 @@ class BinaryAnalyzer:
         except Exception:
             return []
 
+    def _safe_json(self, cmd, default):
+        # Some radare2 commands/versions return an empty (non-JSON) string;
+        # string-reference extraction is best-effort metadata, so degrade
+        # gracefully instead of crashing the whole analysis.
+        try:
+            return json.loads(self.r2_handler.cmd(cmd))
+        except (ValueError, TypeError):
+            return default
+
     def _extract_string_references(self):
         """Map each function name to the strings it references.
 
@@ -204,11 +216,11 @@ class BinaryAnalyzer:
         of every string reference locally via binary search over the function
         ranges.
         """
-        strings = {s['vaddr']: s['string'] for s in json.loads(self.r2_handler.cmd("izj"))}
+        strings = {s['vaddr']: s['string'] for s in self._safe_json("izj", [])}
         if not strings:
             return {}
 
-        functions = json.loads(self.r2_handler.cmd("aflj"))
+        functions = self._safe_json("aflj", [])
         functions.sort(key=self._func_offset)
         starts = [self._func_offset(f) for f in functions]
 
@@ -222,7 +234,7 @@ class BinaryAnalyzer:
             return None
 
         references = {}
-        for xref in json.loads(self.r2_handler.cmd("axlj")):
+        for xref in self._safe_json("axlj", []):
             target, source = xref.get('addr'), xref.get('from')
             if source is None or target not in strings:
                 continue
