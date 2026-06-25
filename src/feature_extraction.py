@@ -209,15 +209,15 @@ class BinaryAnalyzer:
             return {}
 
         functions = json.loads(self.r2_handler.cmd("aflj"))
-        functions.sort(key=lambda f: f['offset'])
-        starts = [f['offset'] for f in functions]
+        functions.sort(key=self._func_offset)
+        starts = [self._func_offset(f) for f in functions]
 
         def function_at(address):
             idx = bisect.bisect_right(starts, address) - 1
             if idx < 0:
                 return None
             func = functions[idx]
-            if address < func['offset'] + func.get('size', 0):
+            if address < self._func_offset(func) + func.get('size', 0):
                 return func['name']
             return None
 
