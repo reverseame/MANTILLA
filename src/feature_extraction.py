@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import json
 import magic
 import subprocess
@@ -10,6 +11,10 @@ import tlsh
 import ssdeep
 import r2pipe
 from optparse import OptionParser
+
+# Directory holding this script and its companion filter lists. Used to resolve
+# the filter files regardless of the current working directory.
+_BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 
 class FileUtils:
@@ -193,29 +198,38 @@ class FunctionFilter:
 
     @staticmethod
     def remove_glibc(clean_names):
-        # Define the glibc files to check
+        # Define the glibc files to check (resolved relative to this script)
         glibc_files = ["glibc_32.txt", "glibc_functions.txt", "uclibc_functions.txt", "musl_functions.txt"]
 
         # Load all glibc names into a set
         glibc_names = set()
         for file in glibc_files:
-            if os.path.exists(file):
-                with open(file, "r") as f:
+            path = os.path.join(_BASE_DIR, file)
+            if os.path.exists(path):
+                with open(path, "r") as f:
                     glibc_names.update(f.read().splitlines())
+            else:
+                print(f"[!] WARNING: libc filter list not found: {path} -- "
+                      "standard libc functions will NOT be filtered out, degrading results.",
+                      file=sys.stderr)
 
         # Filter clean_names, keeping only those whose 'name' is not in glibc_names
         return [item for item in clean_names if item['name'] not in glibc_names]
 
     @staticmethod
     def remove_known_fnc(clean_names):
-        # File containing known function names
-        known_functions_file = "./List_total_functions_uniq_clean.txt"
+        # File containing known function names (resolved relative to this script)
+        known_functions_file = os.path.join(_BASE_DIR, "List_total_functions_uniq_clean.txt")
 
         # Load known function names into a set
         known_fnc_list = set()
         if os.path.exists(known_functions_file):
             with open(known_functions_file, "r") as f:
                 known_fnc_list.update(f.read().splitlines())
+        else:
+            print(f"[!] WARNING: known-functions list not found: {known_functions_file} -- "
+                  "known functions will NOT be filtered out, degrading results.",
+                  file=sys.stderr)
 
         # Criteria for removal
         suffixes_to_remove = [
