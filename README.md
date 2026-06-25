@@ -32,6 +32,12 @@ Now, you can install dependencies in [requirements.txt](requirements.txt):
 (venv) $ python3 -m pip install -r requirements.txt
 ```
 
+To also run the notebooks and auxiliary experimentation scripts, install the development dependencies instead (they include the runtime ones):
+
+```Shell
+(venv) $ python3 -m pip install -r requirements-dev.txt
+```
+
 ## Usage
 
 ```
