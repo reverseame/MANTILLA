@@ -1,6 +1,7 @@
 import os
 import re
 import sys
+import bisect
 import json
 import magic
 import subprocess
@@ -158,6 +159,20 @@ class BinaryAnalyzer:
             return None
 
     def _entropy_from_bytes(self, fnc_bytes):
+        # -1 is a sentinel for "bytes unavailable", not a real entropy value.
+        # Root cause was a radare2 bug: zaf produced no zignature at all for
+        # certain fully-analyzed ARM (A32, not Thumb) functions, so no bytes
+        # could be recovered. It hit ~10-20% of ARM functions and 0% of
+        # x86/x86-64/mips, so the sentinel correlates with the ARM architecture
+        # -- an extraction artifact, not signal. Fixed upstream in radare2 6.x
+        # (radareorg/radare2#26140), so the -1 values only exist in the
+        # features_model.csv generated with an older radare2; current radare2
+        # no longer produces them.
+        # Measured harmless on the existing model: the affected rows collapse to
+        # ~15 unique vectors under drop_duplicates() at training time, and
+        # 5-fold CV accuracy is identical whether -1 is kept or imputed to the
+        # median. Kept as -1 for compatibility with that CSV. Beware before
+        # standardizing features: that would give this artifact real weight.
         if not fnc_bytes:
             return -1
         try:
@@ -181,13 +196,39 @@ class BinaryAnalyzer:
             return []
 
     def _extract_string_references(self):
-        str_list = json.loads(self.r2_handler.cmd("izj"))
+        """Map each function name to the strings it references.
+
+        Instead of issuing one ``axt`` per string (O(number of strings) r2
+        commands), this fetches the string list, the function list and the
+        whole cross-reference list once each, and resolves the owning function
+        of every string reference locally via binary search over the function
+        ranges.
+        """
+        strings = {s['vaddr']: s['string'] for s in json.loads(self.r2_handler.cmd("izj"))}
+        if not strings:
+            return {}
+
+        functions = json.loads(self.r2_handler.cmd("aflj"))
+        functions.sort(key=self._func_offset)
+        starts = [self._func_offset(f) for f in functions]
+
+        def function_at(address):
+            idx = bisect.bisect_right(starts, address) - 1
+            if idx < 0:
+                return None
+            func = functions[idx]
+            if address < self._func_offset(func) + func.get('size', 0):
+                return func['name']
+            return None
+
         references = {}
-        for string in str_list:
-            refs = json.loads(self.r2_handler.cmd(f"axtj @{string['vaddr']}"))
-            for ref in refs:
-                if 'fcn_name' in ref:
-                    references.setdefault(ref['fcn_name'], []).append(string['string'])
+        for xref in json.loads(self.r2_handler.cmd("axlj")):
+            target, source = xref.get('addr'), xref.get('from')
+            if source is None or target not in strings:
+                continue
+            name = function_at(source)
+            if name:
+                references.setdefault(name, []).append(strings[target])
         return references
 
 
