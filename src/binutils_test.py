@@ -89,7 +89,7 @@ def main():
         label_predict = []
         if len(X_test) != 0:
 
-            results = classify_file(model, X_test, X_train, y_train, 0.5)
+            results = classify_file(model, X_test, y_train, 0.5)
             all_predictions = [pred for pred in results["predictions"]]
 
             if all_predictions:

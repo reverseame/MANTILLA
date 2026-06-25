@@ -10,6 +10,9 @@
 
 -r requirements.txt
 
+# Testing
+pytest>=8.0.0
+
 # Experimentation / analysis
 nltk>=3.9.4
 matplotlib>=3.9.2
