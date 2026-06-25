@@ -87,6 +87,10 @@ class BinaryAnalyzer:
 
         func_data = json.loads(self.r2_handler.cmd(f"s {offset}; afij"))[0]
 
+        # Fetch the function bytes once and derive bytes/tlsh/ssdeep/entropy from
+        # them, instead of running "zaf @offset; zj" four separate times.
+        fnc_bytes = self._get_fnc_bytes(offset)
+
         features = {
             'name': function_name,
             'offset': func_data['offset'],
@@ -104,42 +108,53 @@ class BinaryAnalyzer:
             'nlocals': func_data['nlocals'] if 'nlocals' in func_data else 0,
             'nargs': func_data['nargs'] if 'nargs' in func_data else 0,
             'opcodes': self._extract_opcodes(offset),
-            'bytes': self._get_fnc_bytes(function_name, offset),
-            'tlsh_hash_bytes': self._get_tlsh_hash(function_name, offset),
-            'ssdeep': self._get_ssdeep_hash(function_name, offset),
-            'entropy': self._calculate_entropy(func_data, offset),
+            'bytes': fnc_bytes,
+            'tlsh_hash_bytes': self._tlsh_from_bytes(fnc_bytes),
+            'ssdeep': self._ssdeep_from_bytes(fnc_bytes),
+            'entropy': self._entropy_from_bytes(fnc_bytes),
             'fnc_callgraph': self._extract_callgraph_imports(offset),
             'str': list(set(self.string_references.get(function_name, [])))
         }
         return features
 
 
-    def _get_tlsh_hash(self, function_name, offset):
-        try:
-            for item in json.loads(self.r2_handler.cmd(f"zaf @{offset}; zj")):
-                if item['addr'] == offset:
-                    return tlsh.hash(item['bytes'].encode())
-            return None
-        except:
-            return None
+    def _get_fnc_bytes(self, offset):
+        """Return the hex-encoded bytes of the function at ``offset``.
 
-    def _get_ssdeep_hash(self, function_name, offset):
-        try:
-            for item in json.loads(self.r2_handler.cmd(f"zaf @{offset}; zj")):
-                if item['addr'] == offset:
-                    return ssdeep.hash(item['bytes'])
-            return None
-        except:
-            return None
-
-    def _get_fnc_bytes(self, function_name, offset):
+        This is the single ``zaf @offset; zj`` call whose result feeds the
+        bytes, TLSH, ssdeep and entropy features.
+        """
         try:
             for item in json.loads(self.r2_handler.cmd(f"zaf @{offset}; zj")):
                 if item['addr'] == offset:
                     return item['bytes']
             return None
-        except:
+        except Exception:
             return None
+
+    def _tlsh_from_bytes(self, fnc_bytes):
+        if not fnc_bytes:
+            return None
+        try:
+            return tlsh.hash(fnc_bytes.encode())
+        except Exception:
+            return None
+
+    def _ssdeep_from_bytes(self, fnc_bytes):
+        if not fnc_bytes:
+            return None
+        try:
+            return ssdeep.hash(fnc_bytes)
+        except Exception:
+            return None
+
+    def _entropy_from_bytes(self, fnc_bytes):
+        if not fnc_bytes:
+            return -1
+        try:
+            return EntropyCalculator.calculate_entropy(binascii.unhexlify(fnc_bytes))
+        except Exception:
+            return -1
 
 
     def _extract_opcodes(self, offset_func):
@@ -166,12 +181,6 @@ class BinaryAnalyzer:
                     references.setdefault(ref['fcn_name'], []).append(string['string'])
         return references
 
-    def _calculate_entropy(self, function_name, offset):
-        for item in json.loads(self.r2_handler.cmd(f"zaf @{offset}; zj")):
-            if item['addr'] == offset:
-                data = binascii.unhexlify(item['bytes'])
-                return EntropyCalculator.calculate_entropy(data)
-        return -1
 
 
 class FunctionFilter:
