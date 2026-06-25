@@ -92,7 +92,7 @@ def train_knn_model(features_file, n_neighbors, metric):
     return model, X, y
 
 
-def classify_file(model, test_features, X, y, threshold=None):
+def classify_file(model, test_features, y, threshold=None):
     """Collect the labels of each test function's k nearest neighbors.
 
     ``threshold`` is an ABSOLUTE distance in the model's metric (euclidean by
@@ -129,11 +129,11 @@ def main():
     args = parse_arguments()
     test_files = prepare_test_files(args)
 
-    model, X, y = train_knn_model(args.file_model, args.neighbors, args.metric)
+    model, _, y = train_knn_model(args.file_model, args.neighbors, args.metric)
 
     for test_file in test_files:
         test_features = get_features_test([test_file])
-        results = classify_file(model, test_features, X, y, args.threshold)
+        results = classify_file(model, test_features, y, args.threshold)
         print(f"File: {test_file}")
 
         all_predictions = [pred for pred in results["predictions"]]
