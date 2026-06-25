@@ -21,8 +21,9 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install system libraries
-        # libfuzzy-dev: build ssdeep; libmagic1: runtime for python-magic
-        run: sudo apt-get update && sudo apt-get install -y libfuzzy-dev libmagic1
+        # libfuzzy-dev: build ssdeep; libmagic1: runtime for python-magic;
+        # radare2: required by the end-to-end extraction integration tests.
+        run: sudo apt-get update && sudo apt-get install -y libfuzzy-dev libmagic1 radare2
 
       - name: Install Python dependencies
         # ssdeep's setup.py imports pkg_resources, which setuptools >= 81 no
