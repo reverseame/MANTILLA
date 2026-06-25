@@ -195,6 +195,15 @@ class BinaryAnalyzer:
         except Exception:
             return []
 
+    def _safe_json(self, cmd, default):
+        # Some radare2 commands/versions return an empty (non-JSON) string;
+        # string-reference extraction is best-effort metadata, so degrade
+        # gracefully instead of crashing the whole analysis.
+        try:
+            return json.loads(self.r2_handler.cmd(cmd))
+        except (ValueError, TypeError):
+            return default
+
     def _extract_string_references(self):
         """Map each function name to the strings it references.
 
@@ -204,11 +213,11 @@ class BinaryAnalyzer:
         of every string reference locally via binary search over the function
         ranges.
         """
-        strings = {s['vaddr']: s['string'] for s in json.loads(self.r2_handler.cmd("izj"))}
+        strings = {s['vaddr']: s['string'] for s in self._safe_json("izj", [])}
         if not strings:
             return {}
 
-        functions = json.loads(self.r2_handler.cmd("aflj"))
+        functions = self._safe_json("aflj", [])
         functions.sort(key=self._func_offset)
         starts = [self._func_offset(f) for f in functions]
 
@@ -222,7 +231,7 @@ class BinaryAnalyzer:
             return None
 
         references = {}
-        for xref in json.loads(self.r2_handler.cmd("axlj")):
+        for xref in self._safe_json("axlj", []):
             target, source = xref.get('addr'), xref.get('from')
             if source is None or target not in strings:
                 continue
