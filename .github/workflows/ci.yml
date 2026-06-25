@@ -21,9 +21,19 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install system libraries
-        # libfuzzy-dev: build ssdeep; libmagic1: runtime for python-magic;
-        # radare2: required by the end-to-end extraction integration tests.
-        run: sudo apt-get update && sudo apt-get install -y libfuzzy-dev libmagic1 radare2
+        # libfuzzy-dev: build ssdeep; libmagic1: runtime for python-magic.
+        run: sudo apt-get update && sudo apt-get install -y libfuzzy-dev libmagic1
+
+      - name: Install radare2
+        # Ubuntu ships an ancient radare2 (5.5.0) whose afij JSON lacks fields
+        # the extraction uses; pin a modern release for the integration tests.
+        env:
+          R2_VERSION: 6.1.8
+        run: |
+          curl -fsSL -o /tmp/radare2.deb \
+            "https://github.com/radareorg/radare2/releases/download/${R2_VERSION}/radare2_${R2_VERSION}_amd64.deb"
+          sudo dpkg -i /tmp/radare2.deb
+          radare2 -v
 
       - name: Install Python dependencies
         # ssdeep's setup.py imports pkg_resources, which setuptools >= 81 no
