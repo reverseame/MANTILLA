@@ -73,11 +73,17 @@ class BinaryAnalyzer:
         if handler is not None:
             handler.quit()
 
+    @staticmethod
+    def _func_offset(func):
+        # radare2 >= 6.x renamed the aflj/afij function address field from
+        # 'offset' to 'addr'. Accept either so extraction works on both.
+        return func['offset'] if 'offset' in func else func['addr']
+
     def get_functions(self):
         func_list = json.loads(self.r2_handler.cmd('aflj'))
         imports = set(self.get_imports())
         return [
-            {'name': func['name'], 'offset': func['offset']}
+            {'name': func['name'], 'offset': self._func_offset(func)}
             for func in func_list
             if 'sym.imp.' not in func['name'] and func['name'] not in imports
         ]
@@ -96,7 +102,7 @@ class BinaryAnalyzer:
 
         features = {
             'name': function_name,
-            'offset': func_data['offset'],
+            'offset': self._func_offset(func_data),
             'cc': func_data['cc'],
             'cost': func_data['cost'],
             'size': func_data['size'],
