@@ -68,7 +68,10 @@ class BinaryAnalyzer:
         self.string_references = self._extract_string_references()
 
     def __del__(self):
-        self.r2_handler.quit()
+        # r2_handler may be missing if r2pipe.open failed in __init__.
+        handler = getattr(self, 'r2_handler', None)
+        if handler is not None:
+            handler.quit()
 
     def get_functions(self):
         func_list = json.loads(self.r2_handler.cmd('aflj'))
@@ -161,14 +164,14 @@ class BinaryAnalyzer:
         try:
             ops = json.loads(self.r2_handler.cmd(f"s {offset_func}; pdfj"))
             return [op['opcode'].split(' ')[0] for op in ops['ops'] if 'opcode' in op]
-        except:
+        except Exception:
             return []
 
     def _extract_callgraph_imports(self, offset):
         try:
             graph = json.loads(self.r2_handler.cmd(f'agcj {offset}'))
             return graph[0]['imports'] if graph else []
-        except:
+        except Exception:
             return []
 
     def _extract_string_references(self):

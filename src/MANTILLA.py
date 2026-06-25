@@ -9,26 +9,25 @@ import sys
 def get_feature_dict(func):
     """Extract feature dictionary from a function's data."""
     return {
-        'cc': func['cc'],
-        'cost': func['cost'],
-        'size': func['size'],
-        'stackframe': func['stackframe'],
-        'nbbs': func['nbbs'],
-        'ninst': func['ninst'],
-        'edges': func['edges'],
-        'ebbs': func['ebbs'],
+        'cc': func.get('cc', 0),
+        'cost': func.get('cost', 0),
+        'size': func.get('size', 0),
+        'stackframe': func.get('stackframe', 0),
+        'nbbs': func.get('nbbs', 0),
+        'ninst': func.get('ninst', 0),
+        'edges': func.get('edges', 0),
+        'ebbs': func.get('ebbs', 0),
         'noreturn': 1 if func.get('noreturn', False) else 0,
-        'outdegree': func['outdegree'],
-        'nlocals': func['nlocals'],
-        'nargs': func['nargs'],
+        'outdegree': func.get('outdegree', 0),
+        'nlocals': func.get('nlocals', 0),
+        'nargs': func.get('nargs', 0),
         'entropy': func.get('entropy', -1),
-        'fnc_callgraph': len(func['fnc_callgraph']),
+        'fnc_callgraph': len(func.get('fnc_callgraph', [])),
     }
 
 def get_features_test(files):
     """Extract features from test JSON files."""
     features = []
-    duplicate_count = 0
     for file in files:
         with open(file, "r") as f:
             data = json.load(f)

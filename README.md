@@ -21,7 +21,7 @@ $ sudo apt install python3-pip python3-venv
 Create and activate your virtual environment:
 
 ```Shell
-$ python3 -m venv .
+$ python3 -m venv venv
 $ source venv/bin/activate
 (venv) $ git clone https://github.com/reverseame/MANTILLA.git
 ```
