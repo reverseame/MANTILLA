@@ -1,0 +1,142 @@
+Este experimento tiene como objetivo principal lograr que MANTILLA identifique arquitecturas que antes no identificaba, como SPARC y PowerPC. El experimento se basa en dos partes, una de entrenamiento y otra de evaluación:
+
+A continuación se detalla toda la nomenclatura de los ficheros creados utilizada a lo largo del experimento:
+
+				{Arquitectura y librería runtime}_{Modo de optimización}_{Nombre del fichero}.xxx
+
+Arquitectura y librería runtime:
+
+	Linux:
+		MIPSeb:
+			muls: MIPSeb de 32bits (mips-unknown-linux-musl)
+			glibc: MIPSeb de 32bits (mips-unknown-linux-gnu) y  MIPSeb de 64bits  (mips64-unknown-linux-gnu)
+			uClibc: MIPSeb de 64 bits (mips64-unknown-linux-uclibcn32), MIPSeb de 64 bits (mips64-unknown-linux-uclibcn64).
+
+		El n32 significa que utiliza interfaz binaria de aplicación n32 y que utiliza los registros de hardware de 64 bits del
+		procesador para las operaciones matemáticas, pero limita los punteros de memoria y los tipos long a 32 bits.
+
+		El n64 significa que utiliza interfaz binaria de aplicación n64 y que utiliza los registros de hardware de 64 bits del 
+		procesador para las operaciones matemáticas, pero limita los punteros de memoria y los tipos long a 64 bits.
+
+		ARMel:
+			muls: ARMel de 64 bits (arm64-unknown-linux-musl) 
+			glibc: ARMel de 64 bits (arm64-unknown-linux-gnu) 
+			uClibc:  ARMel de 64 bits (arm64-unknown-linux-uclibc)
+
+		PowerPCeb:
+			muls: PowerPCeb de 32 bits (ppc-unknown-linux-musl)
+			glibc: PowerPCeb de 32 bits (ppc-unknown-linux-gnu)
+			uClibc: PowerPCeb de 32 bits (ppc-unknown-linux-uclibc)
+
+		SPARC: 
+			uclibc: SPARC de 32bits (sparc-unknown-linux-uclibc), 
+			glibc: SPARC de 64bits (sparc64-unknown-linux-gnu)
+	
+	Windows:  
+		x86_64:
+			msvcrt: Windows de 64 bits (x86_64-w64-mingw32)
+
+Modo de optimización:
+-O0,-O1, -O2, -O3, -Os
+
+Entrenamiento (Todas las referencias a archivos son de la carpeta de Train):
+
+Esta parte sirve para alimentar a MANTILLA con muestras de diferentes arquitecturas para su posterior evaluación del conocimiento adquirido. Para crear las muestras de diferentes arquitecturas se ha utilizado la herramienta https://github.com/Alexhuszagh/xcross/blob/main/TARGETS.md, que junto a la carpeta de C que contiene ficheros del repositorio https://github.com/TheAlgorithms/C y al fichero de compilar_unstripped.py, han generado los binarios de la carpeta de Bin.
+ 
+Tras obtener los binarios de la carpeta Bin, como son binarios unstripped, tenemos que filtrar las funciones de usuario y de librería, para ello se utiliza este script:
+
+for binario in {nombre-de-carpeta-binarios}/*; do    python3 feature_extraction.py -b "$binario" -s ./{nombre-carpeta-fuentes-C}; done
+
+Esto nos generará una carpeta llamada tmp con las características extraídas de cada binario, en nuestro caso esa carpeta es JSON, esta carpeta la usaremos para escribir el conocimiento extraido en el fichero de features_model.csv el cual no se encuentra en Train sino en la carpeta padre src, esto lo haremos mediante el fichero caracteristicas.py.
+
+
+
+Evaluación (Todas las referencias a archivos son de la carpeta de Evaluation):
+
+En esta parte vamos a confirmar que el nuevo conocimiento adquirido por MANTILLA sirve para la correcta identificación de la arquitectura y librería de runtime, para ello, se utiliza un dataset de malware compuesto por los siguientes ficheros de la carpeta C:  
+
+
+Dataset Malware:
+	DDOS:
+		Dev0uss_Gcc-DDOS-Attacks-master: https://github.com/Dev0uss/Gcc-DDOS-Attacks
+		
+		R00tS3c_DDOS-RootSec: https://github.com/R00tS3c/DDOS-RootSec/tree/master/DDOS%20Scripts
+		
+		DDoS1,2,3: https://github.com/0xjet/malsource.
+		
+	Gafgyt:
+		BASHLITE: https://github.com/ifding/iot-malware/tree/master/BASHLITE
+		
+		Mortem-qBot-Botnet-Src: https://github.com/USBBios/Mortem-qBot-Botnet-Src
+		
+		freakanonymous_enemy: https://github.com/freakanonymous/enemy
+		
+		lizkebab: https://github.com/ifding/iot-malware/tree/master/lizkebab
+		
+		Backdoor.Linux.Bashdoor: https://github.com/vxunderground/MalwareSourceCode/tree/main/Linux/Backdoors
+		
+		Botnet.Linux.LizardSquad: https://github.com/vxunderground/MalwareSourceCode/blob/main/Linux/Botnets/
+					  Botnet.Linux.LizardSquad.zip
+	Hydra:
+		Generic Crimeware.Win32.Hydra: https://github.com/0x1CA3/Net. 
+		
+	Mirai:
+		Mirai.Linux.*: https://github.com/vxunderground/MalwareSourceCode/tree/main/Linux/Mirai-Family
+		
+		Atomic_Mirai: https://github.com/AtomTM/Atomic-Mirai/tree/main/bot
+		
+		[Mirai] *: https://github.com/maxamin/Botnets
+		
+		Mirai-botnet: https://github.com/ifding/iot-malware/tree/master/mirai-botnet
+		
+		gladoonxyz_fourlokoQBoTSource: https://github.com/gladoonxyz/fourlokoQBoTSource 
+		
+		$ Joker $: https://github.com/USBBios/Joker-Mirai-Botnet-Source-V1/tree/main/%24%20Joker%20%24/bot 
+		
+	Otras:
+		Backdoor.Linux.DoubleDragon: https://github.com/vxunderground/MalwareSourceCode/blob/main/Linux/Backdoors/
+					     Backdoor.Linux.DoubleDragon.7z
+		
+		Infector.Linux.Dataseg: https://github.com/vxunderground/MalwareSourceCode/blob/main/Linux/Infectors/Infector.Linux.Dataseg.7z
+		pnscan: https://github.com/ptrrkssn/pnscan
+		
+		Tool.Linux.Malaria: https://github.com/vxunderground/MalwareSourceCode/blob/main/Linux/Tools/Tool.Linux.Malaria.7z
+		
+		Win32.RansomWar: https://github.com/vxunderground/MalwareSourceCode/blob/main/Win32/Ransomware/Win32.RansomWar.rar
+		
+		Backdoor.Linux.ShadyShell: https://github.com/vxunderground/MalwareSourceCode/blob/main/Linux/Backdoors/
+					   Backdoor.Linux.ShadyShell.c 
+		
+		Blacky, Branko, BullMoose,Clibo,Hunatcha, Hunatchab: https://github.com/0xjet/malsource
+		
+		Infector_Win32.MiniPig: https://github.com/cryptwareapps/Malware-Database/tree/main/Malware%20Src/Win32/Infector
+		
+		Lizzard Stresser: https://github.com/Pencil-Spec/Lizard_Stresser/blob/main/Lizzard%20Stresser 
+		
+		Prometheus v4: https://github.com/0xjet/malsource
+		
+		randomware: https://github.com/0xjet/malsource 
+		
+		Worm.Win32.Warskype: https://github.com/vxunderground/MalwareSourceCode/blob/main/Win32/InternetWorm/Worm.Win32.Warskype.c
+		
+	Tsunami: 
+		Botnet.Linux: https://github.com/shipcod3/IRC-Bot-Hunters
+		
+		ziggystartux-master: https://github.com/isdrupter/ziggystartux
+
+
+Con este dataset se utiliza nuevamente la herramienta https://github.com/Alexhuszagh/xcross/blob/main/TARGETS.md, la carpeta de C y los ficheros compilar_stripped.py y compilar_stripped_conjunto.py para generar los binarios de la carpeta Bin, el fichero compilar_stripped_conjunto.py se utiliza en caso de que haya ficheros .h que se necesitan para la compilación.
+
+Tras obtener los binarios, se procede a evaluar el conocimiento de MANTILLA utilizando el fichero probarMantilla.py que genera un informe, el cual es fichero informe_mantilla.md, en el cual aparece el porcentaje de presición de MANTILLA, una tabla con las columnas f1-score, precision, recall y support (numero de ficheros), cada fila es una arquitectura y una librería de runtime distinta, una matriz de confusión y la salida que devuelve MANTILLA para cada fichero.
+
+
+
+
+Siguiendo todos los pasos descritos anteriormente, las conclusiones obtenidas del informe son las siguientes:
+
+En la matriz de confusión podemos ver como ver como hay dificultades a la hora de diferenciar entre las librerías musl y uclibc de ARM ya que a pesar de tener los mismos ficheros para el entrenamiento, se identifican muchos ficheros arm_musl_gcc como arm_uclibc_gcc y varios ficheros arm_uclibc_gcc se identifican como arm_musl_gcc.
+
+Además de eso también podemos ver como hay fallos en identificar las arquitecturas mips_uclibc_gcc y ppc_uclibc_gcc pero dado a que los fallos representan un porcentaje muy bajo en cada caso, no se considera que haya una confusión de librerias clara a la hora de identificarlas. Aunque en el caso de ppc_uclibc_gcc la diferencia de ficheros de entrenamiento puede estar afectando a la hora de identificar.
+
+En cuanto al rendimiento del sistema tras el entrenamiento y evaluación, se considera que el porcentaje de precisión a la hora de identificar arquitectura y librería de runtime es muy bueno y parecido al de los casos de estudio del artículo.
+
